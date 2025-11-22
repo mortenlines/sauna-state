@@ -10,13 +10,26 @@ export default function NotificationDialog({ onClose }: NotificationDialogProps)
 
   useEffect(() => {
     // Check if browser supports notifications
-    if ('Notification' in window && 'serviceWorker' in navigator) {
-      setIsSupported(true)
+    // iOS Safari supports notifications via Service Worker
+    // We check for Notification API first, then verify Service Worker support
+    if ('Notification' in window) {
+      // Service Worker is required for iOS Safari, but we check it separately
+      if ('serviceWorker' in navigator) {
+        setIsSupported(true)
+      } else {
+        // Some browsers support Notification without Service Worker
+        // But iOS Safari requires Service Worker, so we still mark as supported
+        // and will handle the Service Worker registration when requesting permission
+        setIsSupported(true)
+      }
       
       // Check if already subscribed
       if (Notification.permission === 'granted') {
         setIsSubscribed(true)
       }
+    } else {
+      // No Notification API support at all
+      setIsSupported(false)
     }
   }, [])
 
@@ -28,24 +41,45 @@ export default function NotificationDialog({ onClose }: NotificationDialogProps)
 
     if (Notification.permission === 'granted') {
       setIsSubscribed(true)
+      // Ensure Service Worker is registered even if permission was already granted
+      if ('serviceWorker' in navigator) {
+        try {
+          await navigator.serviceWorker.register('/sw.js', { scope: '/' })
+          console.log('Service Worker registered')
+        } catch (error) {
+          console.error('Service Worker registration failed:', error)
+        }
+      }
       return
     }
 
     if (Notification.permission !== 'denied') {
+      // For iOS Safari, we need Service Worker registered before requesting permission
+      // But we can still request permission first and register SW after
       const permission = await Notification.requestPermission()
       if (permission === 'granted') {
         setIsSubscribed(true)
         
-        // Register service worker for push notifications
+        // Register service worker for push notifications (required for iOS Safari)
         if ('serviceWorker' in navigator) {
           try {
             const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' })
             console.log('Service Worker registered:', registration)
+            
+            // Wait for service worker to be ready
+            await navigator.serviceWorker.ready
+            console.log('Service Worker is ready')
           } catch (error) {
             console.error('Service Worker registration failed:', error)
+            // Even if SW registration fails, permission is granted
+            // User can still receive notifications if SW works later
           }
         }
+      } else {
+        console.log('Notification permission denied or dismissed')
       }
+    } else {
+      console.log('Notification permission was previously denied')
     }
   }
 
