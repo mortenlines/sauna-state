@@ -41,31 +41,6 @@ export default function NotificationDialog({ onClose }: NotificationDialogProps)
           try {
             const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' })
             console.log('Service Worker registered:', registration)
-            
-            // For iOS Safari, ensure service worker takes control
-            if (registration.installing) {
-              registration.installing.addEventListener('statechange', () => {
-                if (registration.installing?.state === 'activated') {
-                  console.log('Service Worker activated, reloading page for iOS compatibility...')
-                  // On iOS, sometimes need to reload for service worker to take control
-                  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
-                  if (isIOS && !navigator.serviceWorker.controller) {
-                    // Small delay then reload
-                    setTimeout(() => {
-                      window.location.reload()
-                    }, 500)
-                  }
-                }
-              })
-            }
-            
-            // If already active but not controlling (iOS issue), suggest reload
-            if (registration.active && !navigator.serviceWorker.controller) {
-              const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
-              if (isIOS) {
-                console.log('Service Worker active but not controlling - reload may be needed')
-              }
-            }
           } catch (error) {
             console.error('Service Worker registration failed:', error)
           }

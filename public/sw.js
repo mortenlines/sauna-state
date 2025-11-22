@@ -1,6 +1,7 @@
 // Service Worker for push notifications
 self.addEventListener('install', (event) => {
   console.log('Service Worker installing...')
+  // Skip waiting to activate immediately
   self.skipWaiting()
 })
 
@@ -8,17 +9,8 @@ self.addEventListener('activate', (event) => {
   console.log('Service Worker activating...')
   event.waitUntil(
     Promise.all([
+      // Take control of all clients immediately
       self.clients.claim(),
-      // Clear old caches if needed
-      caches.keys().then(cacheNames => {
-        return Promise.all(
-          cacheNames.map(cacheName => {
-            if (cacheName !== 'sauna-state-v1') {
-              return caches.delete(cacheName)
-            }
-          })
-        )
-      })
     ])
   )
 })
