@@ -28,7 +28,7 @@ export function StatusProvider({ children }: { children: React.ReactNode }) {
     // Trigger push notification if permission is granted
     if ('Notification' in window && Notification.permission === 'granted') {
       const notificationOptions = {
-        body: `Badstua e no ${newStatus === 'yes' ? 'tent opp🔥, og e klar om ca. 30 minutt⏱️' : 'sløkt!🌙'}`,
+        body: `Badstua e ${newStatus === 'yes' ? 'tent opp🔥, og klar om ca. 30 minutt⏱️' : 'sløkt!🌙'}`,
         icon: '/sauna-tent-' + newStatus + '.png',
         badge: '/sauna-tent-' + newStatus + '.png',
         tag: 'sauna-status',
