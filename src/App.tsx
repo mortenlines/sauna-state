@@ -1,12 +1,7 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import StatusPage from './pages/StatusPage'
 import LoginPage from './pages/LoginPage'
-import { AuthProvider, useAuth } from './contexts/AuthContext'
-
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuth()
-  return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />
-}
+import { AuthProvider } from './contexts/AuthContext'
 
 function AppRoutes() {
   return (

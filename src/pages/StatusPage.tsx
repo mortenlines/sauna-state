@@ -8,7 +8,7 @@ import StatusToggle from '../components/StatusToggle'
 
 function StatusPageContent() {
   const { status } = useStatus()
-  const { isAuthenticated, logout } = useAuth()
+  const { isAuthenticated } = useAuth()
   const navigate = useNavigate()
   const [showNotificationDialog, setShowNotificationDialog] = useState(false)
 

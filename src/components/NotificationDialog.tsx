@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { useStatus } from '../contexts/StatusContext'
 
 interface NotificationDialogProps {
   onClose: () => void
@@ -8,7 +7,6 @@ interface NotificationDialogProps {
 export default function NotificationDialog({ onClose }: NotificationDialogProps) {
   const [isSubscribed, setIsSubscribed] = useState(false)
   const [isSupported, setIsSupported] = useState(false)
-  const { status } = useStatus()
 
   useEffect(() => {
     // Check if browser supports notifications
@@ -102,7 +100,7 @@ export default function NotificationDialog({ onClose }: NotificationDialogProps)
           onClick={onClose}
           className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-3 px-6 rounded-lg transition-colors duration-200"
         >
-          Close
+          Lukk
         </button>
       </div>
     </div>
