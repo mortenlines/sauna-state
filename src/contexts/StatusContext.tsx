@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react'
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
 
 type SaunaStatus = 'yes' | 'no'
 
@@ -6,24 +6,127 @@ interface StatusContextType {
   status: SaunaStatus
   setStatus: (status: SaunaStatus) => void
   toggleStatus: () => void
+  isLoading: boolean
 }
 
 const StatusContext = createContext<StatusContextType | undefined>(undefined)
 
+// API endpoint - works with both Vercel and Netlify
+const API_URL = (import.meta as any).env?.VITE_API_URL || '/api/status'
+
 export function StatusProvider({ children }: { children: React.ReactNode }) {
   const [status, setStatusState] = useState<SaunaStatus>('no')
+  const [isLoading, setIsLoading] = useState(true)
+  const [isUpdating, setIsUpdating] = useState(false)
+
+  // Fetch status from API
+  const fetchStatus = useCallback(async (skipIfUpdating = true) => {
+    // Don't fetch if we're currently updating (to avoid race conditions)
+    if (skipIfUpdating && isUpdating) {
+      return
+    }
+
+    try {
+      const response = await fetch(API_URL)
+      if (response.ok) {
+        const data = await response.json()
+        if (data.status === 'yes' || data.status === 'no') {
+          // Only update if status actually changed (avoid unnecessary re-renders)
+          setStatusState((currentStatus) => {
+            if (currentStatus !== data.status) {
+              console.log('Status updated from API:', data.status)
+              return data.status
+            }
+            return currentStatus
+          })
+        }
+      } else if (response.status === 404) {
+        // API not available (local dev) - this is OK, keep current state
+        console.log('API endpoint not found (normal in local dev)')
+      } else {
+        console.warn('Failed to fetch status:', response.status, response.statusText)
+        // Don't change state if API fails - keep current state
+      }
+    } catch (error) {
+      // Network error or CORS - might be local dev
+      console.log('Failed to fetch status (might be local dev):', error)
+      // Don't change state if API fails - keep current state
+    } finally {
+      setIsLoading(false)
+    }
+  }, [isUpdating])
 
   useEffect(() => {
-    // Load status from localStorage
-    const savedStatus = localStorage.getItem('sauna_status') as SaunaStatus
-    if (savedStatus === 'yes' || savedStatus === 'no') {
-      setStatusState(savedStatus)
-    }
-  }, [])
+    // Load status from API on mount
+    fetchStatus(false)
 
-  const setStatus = (newStatus: SaunaStatus) => {
+    // Poll for status updates every 5 seconds to keep all users in sync
+    // But only if we're not currently updating
+    const interval = setInterval(() => {
+      if (!isUpdating) {
+        fetchStatus(true)
+      }
+    }, 5000)
+
+    return () => clearInterval(interval)
+  }, [fetchStatus, isUpdating])
+
+  const setStatus = async (newStatus: SaunaStatus) => {
+    // Prevent multiple simultaneous updates
+    if (isUpdating) {
+      return
+    }
+
+    setIsUpdating(true)
+    
+    // Optimistically update local state
     setStatusState(newStatus)
-    localStorage.setItem('sauna_status', newStatus)
+    
+    try {
+      // Save to API
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: newStatus }),
+      })
+
+      if (!response.ok) {
+        // If API call fails, revert to previous state
+        console.error('Failed to update status:', response.status, response.statusText)
+        // For 404, the API might not be available (local dev)
+        if (response.status === 404) {
+          console.warn('API endpoint not found. This is normal in local development. Status will persist in this session only.')
+          // Keep the optimistic update for local dev
+        } else {
+          // For other errors, re-fetch to get correct state
+          setTimeout(() => {
+            fetchStatus(false)
+          }, 500)
+        }
+      } else {
+        // Success - confirm the update worked
+        const data = await response.json()
+        if (data.status === newStatus) {
+          console.log('Status updated successfully:', newStatus)
+        } else {
+          console.warn('Status mismatch. Expected:', newStatus, 'Got:', data.status)
+          setStatusState(data.status)
+        }
+      }
+    } catch (error) {
+      console.error('Failed to update status:', error)
+      // Re-fetch to get correct state after a short delay
+      setTimeout(() => {
+        fetchStatus(false)
+      }, 500)
+    } finally {
+      // Allow polling to resume after a short delay
+      setTimeout(() => {
+        setIsUpdating(false)
+      }, 1000)
+    }
     
     // Trigger push notification if permission is granted
     if ('Notification' in window && Notification.permission === 'granted') {
@@ -69,7 +172,7 @@ export function StatusProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <StatusContext.Provider value={{ status, setStatus, toggleStatus }}>
+    <StatusContext.Provider value={{ status, setStatus, toggleStatus, isLoading }}>
       {children}
     </StatusContext.Provider>
   )
