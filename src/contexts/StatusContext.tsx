@@ -60,13 +60,13 @@ export function StatusProvider({ children }: { children: React.ReactNode }) {
     // Load status from API on mount
     fetchStatus(false)
 
-    // Poll for status updates every 5 seconds to keep all users in sync
+    // Poll for status updates every 30 seconds to keep all users in sync
     // But only if we're not currently updating
     const interval = setInterval(() => {
       if (!isUpdating) {
         fetchStatus(true)
       }
-    }, 5000)
+    }, 30000)
 
     return () => clearInterval(interval)
   }, [fetchStatus, isUpdating])
