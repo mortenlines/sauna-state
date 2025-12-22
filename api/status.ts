@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { getKv, KV_KEYS, isKvAvailable } from './lib/kv'
+import { getKv, KV_KEYS } from './kv.js'
 
 // Fallback in-memory store (only used if KV is not available, e.g., local dev)
 let currentStatus: 'yes' | 'no' = 'no'
