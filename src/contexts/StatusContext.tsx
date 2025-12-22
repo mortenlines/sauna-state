@@ -11,7 +11,7 @@ interface StatusContextType {
 
 const StatusContext = createContext<StatusContextType | undefined>(undefined)
 
-// API endpoint - works with both Vercel and Netlify
+// API endpoint for Vercel
 const API_URL = (import.meta as any).env?.VITE_API_URL || '/api/status'
 
 export function StatusProvider({ children }: { children: React.ReactNode }) {
