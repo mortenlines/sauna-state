@@ -83,11 +83,20 @@ export function StatusProvider({ children }: { children: React.ReactNode }) {
     setStatusState(newStatus)
     
     try {
+      // Get auth token
+      const token = localStorage.getItem('sauna_auth_token')
+      if (!token) {
+        console.error('Not authenticated')
+        setIsUpdating(false)
+        return
+      }
+
       // Save to API
       const response = await fetch(API_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({ status: newStatus }),
       })

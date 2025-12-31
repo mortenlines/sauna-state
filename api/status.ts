@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { getKv, KV_KEYS } from './kv.js'
+import { verifyToken } from './auth/login.js'
 
 // Fallback in-memory store (only used if KV is not available, e.g., local dev)
 let currentStatus: 'yes' | 'no' = 'no'
@@ -42,7 +43,7 @@ export default async function handler(
   res.setHeader('Access-Control-Allow-Credentials', 'true')
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization')
 
   if (req.method === 'OPTIONS') {
     res.status(200).end()
@@ -63,6 +64,21 @@ export default async function handler(
 
   if (req.method === 'POST') {
     try {
+      // Verify authentication token
+      const authHeader = req.headers.authorization
+      const token = authHeader?.replace('Bearer ', '')
+      
+      if (!token) {
+        res.status(401).json({ error: 'Authentication required' })
+        return
+      }
+
+      const isValid = await verifyToken(token)
+      if (!isValid) {
+        res.status(401).json({ error: 'Invalid or expired token' })
+        return
+      }
+
       const { status } = req.body
       
       if (status === 'yes' || status === 'no') {

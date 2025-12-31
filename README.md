@@ -76,11 +76,19 @@ The `vercel.json` file is already configured.
 
 **Note**: For local development, the app will work without Vercel KV (using in-memory storage), but data won't persist between restarts. For production, Vercel KV is required for persistence.
 
-## Default Password
+## Authentication
 
-The default admin password is: `sauna2024`
+The admin password is stored server-side in an environment variable for security.
 
-**⚠️ Important**: Change this password in production by modifying `src/contexts/AuthContext.tsx`
+**Default password**: `sauna2026` (used as fallback if `ADMIN_PASSWORD` env var is not set)
+
+**⚠️ Important**: Set the `ADMIN_PASSWORD` environment variable in Vercel:
+1. Go to your Vercel project settings
+2. Navigate to Environment Variables
+3. Add `ADMIN_PASSWORD` with your desired password
+4. Redeploy the application
+
+The password is no longer visible in the client-side code. Authentication is handled via secure tokens that expire after 24 hours.
 
 ## Project Structure
 

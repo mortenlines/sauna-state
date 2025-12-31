@@ -8,11 +8,12 @@ export default function LoginPage() {
   const { login, isAuthenticated, logout } = useAuth()
   const navigate = useNavigate()
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     setError('')
     
-    if (login(password)) {
+    const success = await login(password)
+    if (success) {
       navigate('/')
     } else {
       setError('Feil passord')
