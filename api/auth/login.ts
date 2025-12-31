@@ -15,38 +15,42 @@ interface TokenData {
 
 async function storeToken(token: string): Promise<void> {
   const kv = getKv()
-  const expiresAt = Date.now() + TOKEN_EXPIRY
   
   if (kv) {
     try {
-      // Store token in KV with expiration
-      await kv.set(`auth:token:${token}`, expiresAt, { ex: Math.floor(TOKEN_EXPIRY / 1000) })
+      // Store token in KV with expiration (just store "1" as value, rely on KV TTL)
+      const ttlSeconds = Math.floor(TOKEN_EXPIRY / 1000)
+      await kv.set(`auth:token:${token}`, '1', { ex: ttlSeconds })
+      console.log(`Token stored with TTL: ${ttlSeconds} seconds`)
     } catch (error) {
       console.error('Error storing token in KV:', error)
-      // Continue anyway - token will be validated but won't persist
+      throw error // Don't continue if we can't store the token
     }
+  } else {
+    console.warn('KV not available - token will not persist')
   }
 }
 
 async function verifyToken(token: string): Promise<boolean> {
   const kv = getKv()
   
-  if (kv) {
-    try {
-      const expiresAt = await kv.get<number>(`auth:token:${token}`)
-      if (expiresAt && expiresAt > Date.now()) {
-        return true
-      }
-      return false
-    } catch (error) {
-      console.error('Error verifying token:', error)
-      return false
-    }
+  if (!kv) {
+    console.warn('KV not available - cannot verify token')
+    return false
   }
   
-  // Fallback: if KV not available, we can't verify tokens (local dev)
-  // In production, KV should always be available
-  return false
+  try {
+    const value = await kv.get<string>(`auth:token:${token}`)
+    if (value === '1') {
+      console.log('Token verified successfully')
+      return true
+    }
+    console.log(`Token not found or invalid. Value: ${value}`)
+    return false
+  } catch (error) {
+    console.error('Error verifying token:', error)
+    return false
+  }
 }
 
 export default async function handler(
@@ -78,11 +82,19 @@ export default async function handler(
         // Generate a secure token
         const token = crypto.randomBytes(32).toString('hex')
         
-        // Store token
-        await storeToken(token)
-        
-        res.status(200).json({ token, expiresIn: TOKEN_EXPIRY })
-        return
+        try {
+          // Store token
+          await storeToken(token)
+          console.log('Token generated and stored successfully')
+          res.status(200).json({ token, expiresIn: TOKEN_EXPIRY })
+          return
+        } catch (error) {
+          console.error('Failed to store token:', error)
+          // Still return the token even if storage fails (for local dev)
+          // In production, this should not happen if KV is configured
+          res.status(200).json({ token, expiresIn: TOKEN_EXPIRY, warning: 'Token storage may have failed' })
+          return
+        }
       } else {
         res.status(401).json({ error: 'Invalid password' })
         return

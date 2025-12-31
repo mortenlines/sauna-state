@@ -65,19 +65,24 @@ export default async function handler(
   if (req.method === 'POST') {
     try {
       // Verify authentication token
-      const authHeader = req.headers.authorization
-      const token = authHeader?.replace('Bearer ', '')
+      const authHeader = req.headers.authorization || req.headers.Authorization
+      const token = authHeader?.replace(/^Bearer\s+/i, '').trim()
       
       if (!token) {
+        console.log('No token provided in request')
         res.status(401).json({ error: 'Authentication required' })
         return
       }
 
+      console.log(`Verifying token: ${token.substring(0, 8)}...`)
       const isValid = await verifyToken(token)
       if (!isValid) {
+        console.log('Token verification failed')
         res.status(401).json({ error: 'Invalid or expired token' })
         return
       }
+      
+      console.log('Token verified successfully')
 
       const { status } = req.body
       
